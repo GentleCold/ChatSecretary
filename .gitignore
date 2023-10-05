@@ -1,0 +1,12 @@
+# reference
+/PyQt-Fluent-Widgets
+
+# environment
+/venv
+
+# build
+/main.build
+/main.dist
+/output
+
+/.idea
