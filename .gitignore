@@ -8,5 +8,7 @@
 /main.build
 /main.dist
 /output
+/build
+/dist
 
 /.idea

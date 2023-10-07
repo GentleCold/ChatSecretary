@@ -1,5 +1,7 @@
-from PySide6.QtCore import Qt, QUrl
-from PySide6.QtGui import QIcon, QDesktopServices, QFont
+import os
+
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QFrame, QHBoxLayout
 from qfluentwidgets import (NavigationItemPosition, MessageBox, setTheme, Theme, FluentWindow,
                             NavigationAvatarWidget, qrouter, SubtitleLabel, setFont, InfoBadge,
@@ -62,11 +64,9 @@ class MainWindow(FluentWindow):
         )
 
     def init_window(self):
+        basedir = os.path.join(os.path.dirname(__file__), '..')  # main.py
         self.resize(900, 700)
-        self.setWindowIcon(QIcon('./resource/images/logo.png'))
-        q = QFont()
-        q.setBold(True)
-        self.setFont(q)
+        self.setWindowIcon(QIcon(os.path.join(basedir, 'resource', 'images', 'logo.ico')))
 
         # in center
         desktop = QApplication.screens()[0].availableGeometry()

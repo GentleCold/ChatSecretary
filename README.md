@@ -10,13 +10,15 @@
 
 ## 开发环境
 
-安装依赖库：`pip install -r requirement.txt`
+安装依赖库：`pip install -r requirements.txt`
 
 导出依赖库：`pip freeze > requirements.txt`
 
+清除依赖库：`pip uninstall -r requirements.txt -y`
+
 ## 构建
 
-`auto-py-to-exe`
+` pyinstaller main.spec`
 
 ## 项目目录
 
