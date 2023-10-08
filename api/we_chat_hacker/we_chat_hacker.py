@@ -1,7 +1,7 @@
 """
 Author: GentleCold@qq.com
 Reference: https://github.com/LTEnjoy/easyChat/blob/main/ui_auto_wechat.py
-Version: 1.0.0
+Version: 1.0.1
 """
 from typing import List
 
@@ -50,7 +50,7 @@ class WeChatHacker:
     """
 
     def __init__(self):
-        uia.SetGlobalSearchTimeout(1)
+        uia.SetGlobalSearchTimeout(0.0)
         self._we_chat_window = None
         self.user_name = None
 
