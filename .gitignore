@@ -1,5 +1,6 @@
 # reference
 /PyQt-Fluent-Widgets
+/easyChat
 
 # environment
 /venv
@@ -12,3 +13,6 @@
 /dist
 
 /.idea
+
+# log
+@AutomationLog.txt
