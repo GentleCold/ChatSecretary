@@ -61,7 +61,7 @@ class WeChatHacker:
         """
         try:
             self._we_chat_window = uia.WindowControl(searchDepth=1, ClassName='WeChatMainWndForPC')
-            self.user_name = self._we_chat_window.ToolBarControl(Name="导航").GetChildren()[0].Name
+            self.user_name = self._we_chat_window.ToolBarControl(searchDepth=3, Name='导航').GetChildren()[0].Name
         except LookupError:
             return ''
         return self.user_name

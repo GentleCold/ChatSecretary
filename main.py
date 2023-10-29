@@ -1,7 +1,6 @@
 import sys
-from threading import Thread
 
-from PySide6.QtCore import Qt, Slot, QObject, Signal, QThread
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 from qfluentwidgets import MessageBox
 
@@ -21,10 +20,10 @@ class MainProcess:
 
         # create main window
         self.main_window = MainWindow()
-        self.main_window.show()
-        QApplication.processEvents()
 
-    def check_if_login_we_chat(self):
+        self._check_if_login_we_chat()
+
+    def _check_if_login_we_chat(self):
         # check the login of the WeChat
         we_chat_hacker = WeChatHacker()
         username = we_chat_hacker.check_if_login_wechat()
@@ -34,12 +33,14 @@ class MainProcess:
             m = MessageBox(title, content, self.main_window.home_interface.window())
             m.yesButton.setText('重试')
             m.cancelButton.setText('退出')
+            self.main_window.show()
             if m.exec():
                 username = we_chat_hacker.check_if_login_wechat()
             else:
                 sys.exit()
 
         # set username
+        self.main_window.show()
         self.main_window.home_interface.show_user_name(username)
 
     def start(self):
@@ -52,5 +53,4 @@ class MainProcess:
 
 if __name__ == '__main__':
     main = MainProcess()
-    main.check_if_login_we_chat()
     main.start()
