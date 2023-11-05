@@ -50,7 +50,7 @@ class WeChatHacker:
     """
 
     def __init__(self):
-        uia.SetGlobalSearchTimeout(0.0)
+        uia.SetGlobalSearchTimeout(0.1)
         self._we_chat_window = None
         self.user_name = None
 
@@ -94,6 +94,9 @@ class WeChatHacker:
             sender = ''
             if v == MessageType.USER_MESSAGE:
                 sender = message_control.ButtonControl(searchDepth=2).Name
+
+            if sender == self.check_if_login_wechat():
+                sender = 'self'
             messages.append({
                 'sender': sender,
                 'msg': message_control.Name,
@@ -154,5 +157,5 @@ class WeChatHacker:
 if __name__ == '__main__':
     we = WeChatHacker()
     we.check_if_login_wechat()
-    # print(we.get_all_current_message())
+    print(we.get_all_current_message())
     # print(we.get_current_dialog_name())

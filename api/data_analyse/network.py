@@ -4,7 +4,8 @@ import re
 from collections import Counter
 import networkx as nx
 import matplotlib.pyplot as plt
-plt.rcParams['font.sans-serif']=['SimHei']
+
+plt.rcParams['font.sans-serif'] = ['SimHei']
 
 
 class QQGroupMessage:
@@ -47,6 +48,7 @@ class QQGroupMessage:
             self.most_common_word.loc[len(self.most_common_word)] = [number, most_common]
         self.word_node_color = ['#095dbe', '#5a9eed', '#7face1', '#e1e8ef']
         self.person_node_color = ["#ede85a"]
+
     def most_common(self, number):
         """找出频率最多的词"""
         target_rows = self.messageDF[self.messageDF['number'] == number]
@@ -58,8 +60,9 @@ class QQGroupMessage:
                     seg_list.append(word)
         c = Counter()
         for x in seg_list:
-            c[x] += 1    
+            c[x] += 1
         return c.most_common(300)
+
     def draw_network(self, row_idxes):
         """画图"""
         G = nx.Graph()
@@ -80,16 +83,16 @@ class QQGroupMessage:
             for i, word_frequency in enumerate(row[1][:60]):
                 if word_frequency[0] not in node_list:
                     # 放入不同的颜色以区分多频，少频词
-                    node_color_list.append(self.word_node_color[int(i/15)])
+                    node_color_list.append(self.word_node_color[int(i / 15)])
                     G.add_node(word_frequency[0])
                     node_list.append(word_frequency[0])
                 G.add_edge(row[0], word_frequency[0])
         pos = nx.fruchterman_reingold_layout(G)
-        nx.draw_networkx_nodes(G, pos,node_size=280, node_color = node_color_list)
+        nx.draw_networkx_nodes(G, pos, node_size=280, node_color=node_color_list)
         nx.draw_networkx_edges(G, pos)
         nx.draw_networkx_labels(G, pos, font_size=6)
         plt.show()
         # plt.savefig("fig1.png")
-        
+
 
 QQmsg = QQGroupMessage()

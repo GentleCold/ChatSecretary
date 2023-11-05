@@ -10,6 +10,7 @@ from qfluentwidgets import FluentIcon as Icon
 
 from view.chat_interface import ChatInterface
 from view.home_interface import HomeInterface
+from view.graph_interface import GraphInterface
 from view.settings_interface import SettingsInterface
 
 
@@ -24,6 +25,7 @@ class MainWindow(FluentWindow):
         # create sub interface
         self.home_interface = HomeInterface(self)
         self.chat_interface = ChatInterface(self)
+        self.graph_interface = GraphInterface(self)
         self.settings_interface = SettingsInterface(self)
 
         self._init_navigation()
@@ -35,6 +37,7 @@ class MainWindow(FluentWindow):
         """
         self.addSubInterface(self.home_interface, Icon.HOME, '主页')
         self.addSubInterface(self.chat_interface, Icon.CHAT, '聊天')
+        self.addSubInterface(self.graph_interface, Icon.TILES, '图表')
 
         self.navigationInterface.addSeparator()
 
