@@ -1,6 +1,7 @@
 # reference
 /PyQt-Fluent-Widgets
 /easyChat
+/test*.py
 
 # environment
 /venv

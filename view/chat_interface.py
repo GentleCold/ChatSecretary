@@ -6,7 +6,7 @@ from PySide6.QtGui import QPainter, QColor, QFont, QFontMetrics
 from PySide6.QtWidgets import QHBoxLayout, QFrame, QWidget, QVBoxLayout, QListWidgetItem, QListWidget, QLineEdit, \
     QPushButton, QSizePolicy
 from qfluentwidgets import SmoothScrollArea, SubtitleLabel, StrongBodyLabel, BodyLabel, PushButton, MessageBox, \
-    IndeterminateProgressBar
+    IndeterminateProgressBar, InfoBarPosition, InfoBar
 
 from api.we_chat_hacker.we_chat_hacker import WeChatHacker
 
@@ -90,6 +90,7 @@ class ChatBoxView(QWidget):
         self.work = AddBubble()
         self.work.add_component.connect(self.add_bubble)
         self.work.finished.connect(self.on_finished)
+        self.work.error.connect(self.handle_error)
 
         self.work.start()
 
@@ -97,26 +98,31 @@ class ChatBoxView(QWidget):
         if self.bar:
             self.bar.deleteLater()
 
+    def handle_error(self):
+        InfoBar.info(
+            title='警告',
+            content="请保持微信窗口的存在",
+            orient=Qt.Horizontal,
+            isClosable=True,
+            position=InfoBarPosition.TOP_RIGHT,
+            duration=2000,
+            parent=self,
+        )
+
 
 class AddBubble(QThread):
     finished = Signal()
     add_component = Signal(object)
+    error = Signal()
 
     def run(self):
         we_chat_hacker = WeChatHacker()
 
         # check
         username = we_chat_hacker.check_if_login_wechat()
-        while username == '':
-            title = '登录微信'
-            content = '您需要登录并保持微信窗口才能使用小蜜哦~'
-            m = MessageBox(title, content)
-            m.yesButton.setText('重试')
-            m.cancelButton.setText('退出')
-            if m.exec():
-                username = we_chat_hacker.check_if_login_wechat()
-            else:
-                sys.exit()
+        if username == '':
+            self.error.emit()
+            return
 
         msgs = we_chat_hacker.get_all_current_message()
         self.finished.emit()
