@@ -12,7 +12,7 @@ class QQGroupMessage:
     def __init__(self) -> None:
         self.messageDF = pd.DataFrame([], columns=['name', 'number', 'text', 'date', 'time'])
         # 读取数据
-        with open("QQ1.txt", 'r') as f:
+        with open("../../data/QQ1.txt", 'r') as f:
             lines = f.readlines()
             now_read = 8
             while now_read < len(lines):
