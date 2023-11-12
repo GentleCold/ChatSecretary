@@ -12,6 +12,8 @@ from PySide6.QtGui import QPainter, QPen, QColor, QBrush, QPolygonF
 from PySide6.QtWidgets import QGraphicsObject, QGraphicsItem, QStyleOptionGraphicsItem, QWidget, QGraphicsView, \
     QGraphicsScene, QGraphicsDropShadowEffect
 
+import matplotlib
+matplotlib.use('TkAgg')
 
 
 class MsgProcessor:
@@ -84,7 +86,6 @@ class MsgProcessor:
         nx.draw_networkx_nodes(G, pos, node_size=280, node_color=node_color_list)
         nx.draw_networkx_edges(G, pos)
         nx.draw_networkx_labels(G, pos, font_size=6)
-        plt.show()
         return GraphView(G, node_color_list)
 
 

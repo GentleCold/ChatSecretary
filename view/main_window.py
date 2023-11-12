@@ -48,10 +48,8 @@ class MainWindow(FluentWindow):
         Set the size, icon, title and position of the window
         :return:
         """
-        basedir = os.path.join(os.path.dirname(__file__), '..')  # main.py path
         self.resize(900, 700)
         self.setMinimumWidth(760)
-        self.setWindowIcon(QIcon(os.path.join(basedir, 'resource', 'images', 'logo.ico')))
         self.setWindowTitle('ChatSecretary')
 
         # position in center

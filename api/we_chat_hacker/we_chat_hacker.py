@@ -6,6 +6,7 @@ Version: 1.0.1
 from typing import List
 
 import uiautomation as uia
+import keyboard
 
 
 class MessageType:
@@ -54,6 +55,12 @@ class WeChatHacker:
         self._we_chat_window = None
         self.user_name = None
 
+        self.if_pressed = False
+        keyboard.add_hotkey('ctrl+alt', self._hotkey_handler)
+
+    def _hotkey_handler(self):
+        self.if_pressed = True
+
     def check_if_login_wechat(self):
         """
         get we chat window and name of the user
@@ -71,6 +78,10 @@ class WeChatHacker:
         Get all messages of the current dialog
         :return: list of message dictionary, len(return) == 0 means LookupError
         """
+
+        self._we_chat_window.Show(0)
+
+        self.if_pressed = False
         try:
             messages_list_control = self._we_chat_window.ListControl(Name='消息')
             scroll_pattern = messages_list_control.GetScrollPattern()
@@ -78,6 +89,9 @@ class WeChatHacker:
             return []
 
         while True:
+            if self.if_pressed:
+                break
+
             # 上翻至查看聊天记录
             scroll_pattern.SetScrollPercent(-1, 0)
 
