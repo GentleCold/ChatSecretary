@@ -1,6 +1,3 @@
-import sys
-import threading
-
 from PySide6.QtCore import Qt, QEasingCurve, QThread, Signal, Slot
 from PySide6.QtGui import QPainter, QColor, QFont, QFontMetrics
 from PySide6.QtWidgets import QHBoxLayout, QFrame, QWidget, QVBoxLayout, QListWidgetItem, QListWidget, QLineEdit, \
@@ -9,10 +6,13 @@ from qfluentwidgets import SmoothScrollArea, SubtitleLabel, StrongBodyLabel, Bod
     IndeterminateProgressBar, InfoBarPosition, InfoBar
 
 from api.we_chat_hacker.we_chat_hacker import WeChatHacker
+from snownlp import SnowNLP
+import matplotlib.pyplot as plt
+import matplotlib.colors as mc
 
 
 class ChatBubbleItem(QWidget):
-    def __init__(self, sender, message, parent=None):
+    def __init__(self, sender, message, msg_type, parent=None):
         """
         :param sender: pass 'self' if the sender is user
         :param message: message text
@@ -22,27 +22,54 @@ class ChatBubbleItem(QWidget):
         # global vertical layout
         v_box_layout = QVBoxLayout(self)
 
+        if msg_type == 0 or msg_type == 1:
+            v_box_layout.addWidget(BodyLabel(message))
+            return
+
         # sender and msg
         sender_label = BodyLabel()
-        msg = StrongBodyLabel()
+        msg = BodyLabel()
+        emotion = BodyLabel()
+
+        emotion_value = 0
+        align_flag = Qt.AlignLeft
+        background_color = '#FFFFFF'
+
+        if sender == 'self':
+            background_color = '#95EC69'
+            align_flag = Qt.AlignRight
+            sender_label.setText('你')
+
+        # calculate emotion value
+        s = SnowNLP(message)
+        for sentence in s.sentences:
+            emotion_value += SnowNLP(sentence).sentiments
+        if len(s.sentences):
+            emotion_value /= len(s.sentences)
 
         sender_label.setText(sender)
-        if sender == 'self':
-            sender_label.setAlignment(Qt.AlignRight)
-            sender_label.setText('你')
+        sender_label.setAlignment(align_flag)
+        sender_label.setStyleSheet('color: #B8B8B8;')
 
         # magic to set word wrap(break-all)
         msg.setText("\u200b".join(message))
         msg.setWordWrap(True)
 
         msg.setMaximumWidth(400)
-        msg.setStyleSheet('background-color: #E7F8FF; padding: 5;')
+        msg.setStyleSheet(f'background-color: {background_color}; padding: 5;')
 
         # magic to avoid hiding of words
         msg.setMinimumHeight(msg.sizeHint().height() + 5)
 
+        emotion.setText(f'情绪值：{emotion_value}')
+
+        # define reflect of color
+        color = mc.to_hex(plt.cm.RdYlGn(emotion_value))
+        emotion.setStyleSheet(f'background-color: {color}; padding: 5;')
+
         v_box_layout.addWidget(sender_label)
         v_box_layout.addWidget(msg)
+        v_box_layout.addWidget(emotion)
 
 
 class ChatBoxView(QWidget):
@@ -79,8 +106,10 @@ class ChatBoxView(QWidget):
         alignment = Qt.AlignLeft
         if msg['sender'] == 'self':
             alignment = Qt.AlignRight
+        elif msg['type'] == 0 or msg['type'] == 1:
+            alignment = Qt.AlignCenter
 
-        self.content_vbox.addWidget(ChatBubbleItem(msg['sender'], msg['msg']),
+        self.content_vbox.addWidget(ChatBubbleItem(msg['sender'], msg['msg'], msg['type']),
                                     alignment=alignment)
 
     def add_all_bubbles_thread(self):
