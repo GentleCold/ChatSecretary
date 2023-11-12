@@ -160,7 +160,7 @@ class WeChatHacker:
 
             if cnt > 0:
                 return MessageType.USER_MESSAGE
-            elif raw_message == '查看更多消息':
+            elif raw_message == '查看更多消息' or raw_message == '以下为新消息':
                 return MessageType.MORE_MESSAGE_FLAG
             elif '红包' in raw_message:
                 return MessageType.HONG_BAO

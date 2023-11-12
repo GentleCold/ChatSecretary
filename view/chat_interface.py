@@ -28,6 +28,7 @@ class ChatBubbleItem(QWidget):
 
         # sender and msg
         sender_label = BodyLabel()
+        sender_label.setText(sender)
         msg = BodyLabel()
         emotion = BodyLabel()
 
@@ -47,7 +48,6 @@ class ChatBubbleItem(QWidget):
         if len(s.sentences):
             emotion_value /= len(s.sentences)
 
-        sender_label.setText(sender)
         sender_label.setAlignment(align_flag)
         sender_label.setStyleSheet('color: #B8B8B8;')
 

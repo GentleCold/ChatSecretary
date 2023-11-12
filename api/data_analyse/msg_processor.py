@@ -7,7 +7,8 @@ import re
 from collections import Counter
 import matplotlib.pyplot as plt
 import networkx as nx
-from PySide6.QtCore import QRectF, Qt, QLineF, QPointF, QParallelAnimationGroup, QPropertyAnimation, QEasingCurve, QPoint
+from PySide6.QtCore import QRectF, Qt, QLineF, QPointF, QParallelAnimationGroup, QPropertyAnimation, QEasingCurve, \
+    QPoint
 from PySide6.QtGui import QPainter, QPen, QColor, QBrush, QPolygonF, QCursor
 from PySide6.QtWidgets import QGraphicsObject, QGraphicsItem, QStyleOptionGraphicsItem, QWidget, QGraphicsView, \
     QGraphicsScene, QGraphicsDropShadowEffect
@@ -17,12 +18,29 @@ from gensim.models import LdaModel, LdaMulticore
 import logging
 # import pyLDAvis.gensim
 import itertools
+from snownlp import SnowNLP
+
+import matplotlib
+
+matplotlib.use('TkAgg')
+
+
+def _get_emotion(text):
+    s = SnowNLP(text)
+    emotion = 0
+    for sentence in s.sentences:
+        emotion += SnowNLP(sentence).sentiments
+    if len(s.sentences):
+        emotion /= len(s.sentences)
+
+    return emotion
 
 
 class MsgProcessor:
     """
     handle msg
     """
+
     def __init__(self):
         pass
         self._messageDF = pd.DataFrame()
@@ -30,6 +48,7 @@ class MsgProcessor:
         self.person_node_color = ["#ede85a"]
         self.person2word_edge_color = "#1a4157"
         self.word2word_edge_color = "#55A7D5"
+        self.word_emotion = {}
 
     def lda_analyse(self, idx):
         corpus = self.get_line_cut(idx)
@@ -87,6 +106,13 @@ class MsgProcessor:
             for word, flag in words:
                 if flag in ("n", "nr", "ns", "nt", "nw", "nz"):
                     cuts.append(word)
+
+                    if word not in self.word_emotion:
+                        self.word_emotion[word] = [0, 0]
+
+                    self.word_emotion[word][0] += _get_emotion(txt)
+                    self.word_emotion[word][1] += 1
+
             if cuts:
                 cut_list.append(cuts)
         return cut_list
@@ -127,7 +153,7 @@ class MsgProcessor:
             for i, word in enumerate(words):
                 if word[0] not in node_list:
                     # 放入不同的颜色以区分多频，少频词
-                    node_color_list.append(self.word_node_color[int(i / (word_count/4))])
+                    node_color_list.append(self.word_node_color[int(i / (word_count / 4))])
                     G.add_node(word[0])
                     personal_node_list.append(word[0])
                     # node_list.append(word[0])
@@ -152,13 +178,13 @@ class MsgProcessor:
                             edge_color_dict[(pair[0], pair[1])] = self.word2word_edge_color
                             # edge_color_list.append(self.word2word_edge_color)
             node_list.extend(personal_node_list)
-        return GraphView(G, node_color_list, edge_color_dict, father_widget, display_widget)
+        return GraphView(G, node_color_list, edge_color_dict, father_widget, display_widget, self.word_emotion)
 
 
 class Node(QGraphicsObject):
     """A QGraphicsItem representing node in a graph"""
 
-    def __init__(self, name: str, color, father_widget: QWidget, display_widget: QWidget, parent=None):
+    def __init__(self, name: str, color, father_widget: QWidget, display_widget: QWidget, emotion, parent=None):
         """Node constructor
         Args:
             name (str): Node label
@@ -173,6 +199,7 @@ class Node(QGraphicsObject):
         self._color.setAlpha(230)
         self._radius = 25
         self._rect = QRectF(0, 0, self._radius * 2, self._radius * 2)
+        self._emotion = emotion
 
         self.setFlag(QGraphicsItem.ItemIsMovable)
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges)
@@ -194,8 +221,8 @@ class Node(QGraphicsObject):
         pos.setX(pos.x() + 20)
         pos.setY(pos.y() - 20)
         self.display_widget.move(pos)
-        self.display_widget.set_text(self._name)
-        # self.display_widget.show()
+        self.display_widget.add_label(self._emotion)
+        self.display_widget.show()
         self.update()
 
     def hoverLeaveEvent(self, event):
@@ -293,8 +320,8 @@ class Edge(QGraphicsItem):
         """
         return (
             QRectF(self._line.p1(), self._line.p2())
-            .normalized()
-            .adjusted(
+                .normalized()
+                .adjusted(
                 -self._tickness - self._arrow_size,
                 -self._tickness - self._arrow_size,
                 self._tickness + self._arrow_size,
@@ -389,7 +416,8 @@ class Edge(QGraphicsItem):
 
 
 class GraphView(QGraphicsView):
-    def __init__(self, graph: nx.Graph, node_color_list, edge_color_dict, father_widget, display_widget, parent=None):
+    def __init__(self, graph: nx.Graph, node_color_list, edge_color_dict, father_widget, display_widget, word_emotion,
+                 parent=None):
         """GraphView constructor
 
         This widget can display a directed graph
@@ -405,6 +433,8 @@ class GraphView(QGraphicsView):
         self._graph = graph
         self._scene = QGraphicsScene()
         self.setScene(self._scene)
+
+        self._word_emotion = word_emotion
 
         self.node_color_list = node_color_list
         self.edge_color_dict = edge_color_dict
@@ -476,7 +506,11 @@ class GraphView(QGraphicsView):
 
         # Add nodes
         for i, node in enumerate(self._graph):
-            item = Node(node, self.node_color_list[i], self.father_widget, self.display_widget)
+            emotion = 0
+            if node in self._word_emotion:
+                emotion = self._word_emotion[node][0] / self._word_emotion[node][1]
+            item = Node(node, self.node_color_list[i], self.father_widget, self.display_widget,
+                        emotion)
             self.scene().addItem(item)
             self._nodes_map[node] = item
 

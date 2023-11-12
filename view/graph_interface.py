@@ -12,6 +12,8 @@ from qfluentwidgets import SmoothScrollArea, SubtitleLabel, StrongBodyLabel, Bod
 
 from api.data_analyse.import_messages_from_QQ import QQGroupMessage
 from api.data_analyse.msg_processor import MsgProcessor
+import matplotlib.pyplot as plt
+import matplotlib.colors as mc
 
 
 class GraphInterface(QFrame):
@@ -59,7 +61,7 @@ class GraphInterface(QFrame):
         self.v_box_layout.addWidget(self.view)
 
         # self.hover_tip_widget.raise_()
-        # self.display_widget.raise_()
+        self.display_widget.raise_()
 
 
 class DisplayInfoWidget(QWidget):
@@ -71,10 +73,14 @@ class DisplayInfoWidget(QWidget):
         shadow.setColor("#808080")
         self.setGraphicsEffect(shadow)
         self.resize(200, 100)
-        self.text = None
+        self.label = StrongBodyLabel()
+        self.v_box_layout = QVBoxLayout(self)
+        self.v_box_layout.addWidget(self.label)
 
-    def set_text(self, text):
-        self.text = text
+    def add_label(self, value):
+        color = mc.to_hex(plt.cm.RdYlGn(value))
+        self.label.setStyleSheet(f'background-color: {color}; padding: 5;')
+        self.label.setText(f'情绪值：{round(value, 4)}')
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -87,11 +93,3 @@ class DisplayInfoWidget(QWidget):
         radius = 20  # 圆角半径
         path.addRoundedRect(0, 0, w, h, radius, radius)
         painter.drawPath(path)
-
-        # paint text
-        if self.text is not None:
-            painter = QPainter(self)
-            painter.setPen(QColor("#000000"))
-            painter.drawText(5, 5, self.text)
-
-
