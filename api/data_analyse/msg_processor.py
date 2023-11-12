@@ -7,11 +7,16 @@ import re
 from collections import Counter
 import matplotlib.pyplot as plt
 import networkx as nx
-from PySide6.QtCore import QRectF, Qt, QLineF, QPointF, QParallelAnimationGroup, QPropertyAnimation, QEasingCurve
-from PySide6.QtGui import QPainter, QPen, QColor, QBrush, QPolygonF
+from PySide6.QtCore import QRectF, Qt, QLineF, QPointF, QParallelAnimationGroup, QPropertyAnimation, QEasingCurve, QPoint
+from PySide6.QtGui import QPainter, QPen, QColor, QBrush, QPolygonF, QCursor
 from PySide6.QtWidgets import QGraphicsObject, QGraphicsItem, QStyleOptionGraphicsItem, QWidget, QGraphicsView, \
     QGraphicsScene, QGraphicsDropShadowEffect
-
+# from view.graph_interface import DisplayInfoWidget
+from gensim.corpora import Dictionary
+from gensim.models import LdaModel, LdaMulticore
+import logging
+# import pyLDAvis.gensim
+import itertools
 
 
 class MsgProcessor:
@@ -23,29 +28,68 @@ class MsgProcessor:
         self._messageDF = pd.DataFrame()
         self.word_node_color = ['#095dbe', '#5a9eed', '#7face1', '#e1e8ef']
         self.person_node_color = ["#ede85a"]
+        self.person2word_edge_color = "#1a4157"
+        self.word2word_edge_color = "#55A7D5"
+
+    def lda_analyse(self, idx):
+        corpus = self.get_line_cut(idx)
+        dictionary = Dictionary(self.get_line_cut(idx))
+        corpus_bow = [dictionary.doc2bow(doc) for doc in corpus]
+        temp = dictionary[0]
+        id2word = dictionary.id2token
+        model = LdaModel(
+            corpus=corpus_bow,
+            id2word=id2word,
+            chunksize=2000,
+            alpha='auto',
+            eta='auto',
+            # iterations=400,
+            num_topics=10,
+            # passes=20,
+            eval_every=None
+        )
+        topic_word_dist = model.get_topics()
+        N = 2
+        topics_list = []
+        for topic_id, dist in enumerate(topic_word_dist):
+            # print("Topic {}:".format(topic_id + 1))
+            topics_list.append([word for word, prob in model.show_topic(topic_id, topn=N)])
+        # print(topics_list)
+        return topics_list
 
     def init_from_pd(self, messageDF):
         """
         get mang msgs with pd
         """
         self._messageDF = messageDF
-        # self._messageDF['seg'] = self._messageDF.apply(lambda x: None, axis=1)
-        # print(self._messageDF.head())
+        # self.get_line_cut(0)
 
     def get_most_common(self, idx, count=60):
         """
         get most common words for a QQ_number
         """
-        target_rows = self._messageDF[self._messageDF['idx'] == idx]
-        # if target_rows['seg'][0] is None:
+        line_cut = self.get_line_cut(idx)
         c = Counter()
+        for words in line_cut:
+            for word in words:
+                c[word] += 1
+        return c.most_common(count)
+
+    def get_line_cut(self, idx):
+        """
+        get lint cut for every row
+        """
+        target_rows = self._messageDF[self._messageDF['idx'] == idx]
+        cut_list = []
         for i, txt in enumerate(target_rows['text']):
             words = pseg.cut(txt)
+            cuts = []
             for word, flag in words:
                 if flag in ("n", "nr", "ns", "nt", "nw", "nz"):
-                    print(flag, word)
-                    c[word] += 1
-        return c.most_common(count)
+                    cuts.append(word)
+            if cuts:
+                cut_list.append(cuts)
+        return cut_list
 
     def get_name_with_idx(self, idx):
         result = self._messageDF.query(f"idx == {idx}")
@@ -54,8 +98,14 @@ class MsgProcessor:
         else:
             return result['name'].values[0]
 
-    def draw_network(self, idxes, word_count=30):
+    def draw_network(self, idxes, father_widget, display_widget, lda_flag, word_count=30):
+        """
+        Args:
+            lda_flag: 是否展示lda结果
+        """
+
         G = nx.Graph()
+        edge_color_dict = {}
         edge_list = []
         # 节点列表（一个名词或一个人是一个节点）
         node_list = []
@@ -63,6 +113,8 @@ class MsgProcessor:
         node_color_list = []
         # row_indexes是一个列表，传入的是画谁的图，[1,2]就是画发言数量前两名的图
         for idx in idxes:
+            # 每个人的node_list，最后再合并到总node_list中
+            personal_node_list = []
             # name = self.get_name_with_idx(idx)
             name = str(idx)
             words = self.get_most_common(idx, count=word_count)
@@ -77,27 +129,44 @@ class MsgProcessor:
                     # 放入不同的颜色以区分多频，少频词
                     node_color_list.append(self.word_node_color[int(i / (word_count/4))])
                     G.add_node(word[0])
-                    node_list.append(word[0])
+                    personal_node_list.append(word[0])
+                    # node_list.append(word[0])
                 G.add_edge(name, word[0])
-        pos = nx.fruchterman_reingold_layout(G)
-
-        nx.draw_networkx_nodes(G, pos, node_size=280, node_color=node_color_list)
-        nx.draw_networkx_edges(G, pos)
-        nx.draw_networkx_labels(G, pos, font_size=6)
-        plt.show()
-        return GraphView(G, node_color_list)
+                edge_list.append((name, word[0]))
+                # print(name, word[0], 0)
+                edge_color_dict[(name, word[0])] = self.person2word_edge_color
+                # edge_color_list.append(self.person2word_edge_color)
+            if lda_flag:
+                lda_result = self.lda_analyse(idx)
+                for topic in lda_result:
+                    word_exist_list = []
+                    for word in topic:
+                        if word in personal_node_list:
+                            word_exist_list.append(word)
+                    if len(word_exist_list) >= 2:
+                        pairs = list(itertools.combinations(word_exist_list, 2))
+                        for pair in pairs:
+                            G.add_edge(pair[0], pair[1])
+                            edge_list.append((pair[0], pair[1]))
+                            # print(pair[0], pair[1], 1)
+                            edge_color_dict[(pair[0], pair[1])] = self.word2word_edge_color
+                            # edge_color_list.append(self.word2word_edge_color)
+            node_list.extend(personal_node_list)
+        return GraphView(G, node_color_list, edge_color_dict, father_widget, display_widget)
 
 
 class Node(QGraphicsObject):
     """A QGraphicsItem representing node in a graph"""
 
-    def __init__(self, name: str, color, parent=None):
+    def __init__(self, name: str, color, father_widget: QWidget, display_widget: QWidget, parent=None):
         """Node constructor
         Args:
             name (str): Node label
+            display_widget: display (node) info widget
         """
         super().__init__(parent)
         self.setAcceptHoverEvents(True)
+        self.father_widget = father_widget
         self._name = name
         self._edges = []
         self._color = QColor(color)
@@ -109,8 +178,10 @@ class Node(QGraphicsObject):
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges)
         self.setCacheMode(QGraphicsItem.DeviceCoordinateCache)
 
+        self.display_widget = display_widget
+        self.display_widget.raise_()
+
     def hoverEnterEvent(self, event):
-        # print("hover enter")
         self._color.setAlpha(255)
         # set shadow effect
         shadow = QGraphicsDropShadowEffect(self)
@@ -118,12 +189,19 @@ class Node(QGraphicsObject):
         shadow.setBlurRadius(50)
         shadow.setColor("#808080")
         self.setGraphicsEffect(shadow)
+        pos = QCursor.pos()
+        pos = self.father_widget.mapFromGlobal(pos)
+        pos.setX(pos.x() + 20)
+        pos.setY(pos.y() - 20)
+        self.display_widget.move(pos)
+        self.display_widget.set_text(self._name)
+        # self.display_widget.show()
         self.update()
 
     def hoverLeaveEvent(self, event):
-        # print("hover leave")
         self._color.setAlpha(230)
         self.setGraphicsEffect(None)
+        self.display_widget.hide()
         self.update()
 
     def boundingRect(self) -> QRectF:
@@ -184,7 +262,7 @@ class Node(QGraphicsObject):
 
 
 class Edge(QGraphicsItem):
-    def __init__(self, source: Node, dest: Node, parent: QGraphicsItem = None):
+    def __init__(self, source: Node, dest: Node, color, parent: QGraphicsItem = None):
         """Edge constructor
 
         Args:
@@ -196,8 +274,8 @@ class Edge(QGraphicsItem):
         self._dest = dest
 
         self._tickness = 2
-        self._color = "#1a4157"
-        self._color = QColor(113, 113, 113, 204)
+        # self._color = color
+        self._color = QColor(color)
         self._arrow_size = 20
 
         self._source.add_edge(self)
@@ -311,20 +389,25 @@ class Edge(QGraphicsItem):
 
 
 class GraphView(QGraphicsView):
-    def __init__(self, graph: nx.Graph , color_list, parent=None):
+    def __init__(self, graph: nx.Graph, node_color_list, edge_color_dict, father_widget, display_widget, parent=None):
         """GraphView constructor
 
         This widget can display a directed graph
 
         Args:
             graph (nx.Graph): a networkx graph
+            node_color_list : node color list, len(node_color_list) = len(node_list)
+            display_widget: display info widget. Display when hover
         """
         super().__init__()
+        self.display_widget = display_widget
+        self.father_widget = father_widget
         self._graph = graph
         self._scene = QGraphicsScene()
         self.setScene(self._scene)
 
-        self.color_list = color_list
+        self.node_color_list = node_color_list
+        self.edge_color_dict = edge_color_dict
 
         # Used to add space between nodes
         self._graph_scale = 400
@@ -344,6 +427,7 @@ class GraphView(QGraphicsView):
         }
 
         self._load_graph()
+        # self.set_nx_layout("fruchterman_reingold_layout")shell_layout
         self.set_nx_layout("fruchterman_reingold_layout")
 
         self.setStyleSheet('border: none;')
@@ -374,7 +458,7 @@ class GraphView(QGraphicsView):
                 x, y = pos
                 x *= self._graph_scale
                 y *= self._graph_scale
-                item = self._nodes_map[node]
+                item: Node = self._nodes_map[node]
 
                 animation = QPropertyAnimation(item, b"pos")
                 animation.setDuration(1000)
@@ -392,7 +476,7 @@ class GraphView(QGraphicsView):
 
         # Add nodes
         for i, node in enumerate(self._graph):
-            item = Node(node, self.color_list[i])
+            item = Node(node, self.node_color_list[i], self.father_widget, self.display_widget)
             self.scene().addItem(item)
             self._nodes_map[node] = item
 
@@ -400,4 +484,8 @@ class GraphView(QGraphicsView):
         for a, b in self._graph.edges:
             source = self._nodes_map[a]
             dest = self._nodes_map[b]
-            self.scene().addItem(Edge(source, dest))
+            try:
+                color = self.edge_color_dict[(a, b)]
+            except KeyError:
+                color = self.edge_color_dict[(b, a)]
+            self.scene().addItem(Edge(source, dest, color))
