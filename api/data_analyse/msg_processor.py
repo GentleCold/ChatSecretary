@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import re
 from collections import Counter
+from collections import defaultdict
 import matplotlib.pyplot as plt
 import networkx as nx
 from PySide6.QtCore import QRectF, Qt, QLineF, QPointF, QParallelAnimationGroup, QPropertyAnimation, QEasingCurve, \
@@ -19,6 +20,8 @@ import logging
 # import pyLDAvis.gensim
 import itertools
 from snownlp import SnowNLP
+from jieba import lcut
+import wordcloud
 
 import matplotlib
 
@@ -49,6 +52,8 @@ class MsgProcessor:
         self.person2word_edge_color = "#1a4157"
         self.word2word_edge_color = "#55A7D5"
         self.word_emotion = {}
+        self.month_activity_trend = {}
+        self.day_activity_trend = {}
 
     def lda_analyse(self, idx):
         corpus = self.get_line_cut(idx)
@@ -123,6 +128,43 @@ class MsgProcessor:
             return None
         else:
             return result['name'].values[0]
+
+    def draw_wordcloud(self):
+        """
+        draw word cloud and time graph
+        """
+        date_text = defaultdict(str)
+        months = []
+        for index, line in self._messageDF.iterrows():
+            words = lcut(line['text'])
+            month = line['date'][:7]
+
+            if month not in months:
+                months.append(month)
+                self.month_activity_trend[month] = defaultdict(float)
+                self.day_activity_trend[month] = defaultdict(float)
+            time = line['time'].split(':')
+            day = line['date'][8:10]
+            hour = time[0]
+            self.month_activity_trend[month][day] += 1
+            self.day_activity_trend[month][float(hour)] += 1
+
+            date_text[month] += ' '.join(words)
+
+        with open('./resource/stopwords/stopwords.txt', encoding='utf-8') as f:
+            word = f.readlines()
+            stopwords = set()
+            for i in word:
+                i = i.replace("\n", "")
+                stopwords.add(i)
+        wc = wordcloud.WordCloud(max_words=100, font_path='./resource/fonts/SmileySans-Oblique.ttf',
+                                 stopwords=stopwords,
+                                 background_color='white', height=500, width=400, max_font_size=150)
+        for month in months:
+            wc.generate(date_text[month])
+            wc.to_file(f'./resource/images/wordclouds/{month}-wordcloud.png')
+
+        return months
 
     def draw_network(self, idxes, father_widget, display_widget, lda_flag, word_count=30):
         """
@@ -320,8 +362,8 @@ class Edge(QGraphicsItem):
         """
         return (
             QRectF(self._line.p1(), self._line.p2())
-                .normalized()
-                .adjusted(
+            .normalized()
+            .adjusted(
                 -self._tickness - self._arrow_size,
                 -self._tickness - self._arrow_size,
                 self._tickness + self._arrow_size,
