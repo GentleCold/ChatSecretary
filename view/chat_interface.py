@@ -6,14 +6,16 @@ from PySide6.QtGui import QPainter, QColor, QFont, QFontMetrics
 from PySide6.QtWidgets import QHBoxLayout, QFrame, QWidget, QVBoxLayout, QListWidgetItem, QListWidget, QLineEdit, \
     QPushButton, QSizePolicy
 from qfluentwidgets import SmoothScrollArea, SubtitleLabel, StrongBodyLabel, BodyLabel, PushButton, MessageBox, \
-    IndeterminateProgressBar, InfoBarPosition, InfoBar
+    IndeterminateProgressBar, InfoBarPosition, InfoBar, ComboBox
 
 from api.we_chat_hacker.we_chat_hacker import WeChatHacker
 from snownlp import SnowNLP
 import matplotlib.pyplot as plt
 import matplotlib.colors as mc
 
-EMOTIONS = []
+EMOTIONS = {}
+
+
 class ChatBubbleItem(QWidget):
     def __init__(self, sender, message, msg_type, parent=None):
         """
@@ -45,11 +47,14 @@ class ChatBubbleItem(QWidget):
             sender_label.setText('你')
 
         # calculate emotion value
-        s = SnowNLP(message)
-        for sentence in s.sentences:
-            emotion_value += SnowNLP(sentence).sentiments
-        if len(s.sentences):
-            emotion_value /= len(s.sentences)
+        try:
+            s = SnowNLP(message.strip())
+            for sentence in s.sentences:
+                emotion_value += SnowNLP(sentence).sentiments
+            if len(s.sentences):
+                emotion_value /= len(s.sentences)
+        except:
+            pass
 
         sender_label.setAlignment(align_flag)
         sender_label.setStyleSheet('color: #B8B8B8;')
@@ -64,7 +69,11 @@ class ChatBubbleItem(QWidget):
         # magic to avoid hiding of words
         msg.setMinimumHeight(msg.sizeHint().height() + 5)
 
-        EMOTIONS.append(emotion_value)
+        if sender not in EMOTIONS:
+            EMOTIONS[sender] = [emotion_value]
+        else:
+            EMOTIONS[sender].append(emotion_value)
+
         emotion.setText(f'情绪值：{emotion_value}')
 
         # define reflect of color
@@ -119,7 +128,6 @@ class ChatBoxView(QWidget):
     def add_all_bubbles_thread(self, parent):
         self.bar = IndeterminateProgressBar(self)
         self.v_box_layout.addWidget(self.bar, alignment=Qt.AlignCenter)
-
         self.work = AddBubble()
         self.work.add_component.connect(self.add_bubble)
         self.work.finished.connect(functools.partial(self.on_finished, parent))
@@ -159,7 +167,6 @@ class AddBubble(QThread):
             return
 
         msgs = we_chat_hacker.get_all_current_message()
-        self.finished.emit()
         for msg in msgs:
             self.add_component.emit(msg)
 
@@ -185,18 +192,35 @@ class ChartView(QWidget):
         self.v_box_layout = QVBoxLayout(self)
         self.chart = QtCharts.QChart()
         chart_view = QtCharts.QChartView(self.chart)
-        self.v_box_layout.addWidget(chart_view)
 
         self.chart.setTitle("情绪折线图")
 
-    def draw_chart(self):
-        series = QtCharts.QLineSeries()
-        # 添加数据点
-        for i, value in enumerate(EMOTIONS):
-            series.append(i, value)
+        self.comboBox = ComboBox()
+        self.comboBox.setCurrentIndex(0)
+        self.comboBox.setMinimumWidth(210)
 
-        self.chart.addSeries(series)
-        self.chart.createDefaultAxes()
+        self.v_box_layout.addWidget(self.comboBox)
+        self.v_box_layout.addWidget(chart_view)
+
+        self.comboBox.currentIndexChanged.connect(
+            lambda index: self.chart.series()[index].setVisible(True) if index >= 0 else None)
+
+    def draw_chart(self):
+        # 添加数据点
+        sorted_value = dict(sorted(EMOTIONS.items(), key=lambda x: len(x[1]), reverse=True))
+        for key, value_list in sorted_value.items():
+            if key == '':
+                continue
+            series = QtCharts.QLineSeries()
+            for i, value in enumerate(value_list):
+                series.append(i, value)
+
+            series.setName(key)
+            series.setVisible(False)
+            self.chart.addSeries(series)
+            self.chart.createDefaultAxes()
+
+            self.comboBox.addItem(key)
 
 
 class ChatInterface(QFrame):
@@ -214,5 +238,5 @@ class ChatInterface(QFrame):
         operation_view.add_btn(self)
 
         self.v_box_layout.addWidget(self.chat_box_view)
-        self.v_box_layout.addWidget(operation_view)
         self.v_box_layout.addWidget(self.chart_view)
+        self.v_box_layout.addWidget(operation_view)
