@@ -1,3 +1,6 @@
+import functools
+
+from PySide6 import QtCharts
 from PySide6.QtCore import Qt, QEasingCurve, QThread, Signal, Slot
 from PySide6.QtGui import QPainter, QColor, QFont, QFontMetrics
 from PySide6.QtWidgets import QHBoxLayout, QFrame, QWidget, QVBoxLayout, QListWidgetItem, QListWidget, QLineEdit, \
@@ -10,7 +13,7 @@ from snownlp import SnowNLP
 import matplotlib.pyplot as plt
 import matplotlib.colors as mc
 
-
+EMOTIONS = []
 class ChatBubbleItem(QWidget):
     def __init__(self, sender, message, msg_type, parent=None):
         """
@@ -61,6 +64,7 @@ class ChatBubbleItem(QWidget):
         # magic to avoid hiding of words
         msg.setMinimumHeight(msg.sizeHint().height() + 5)
 
+        EMOTIONS.append(emotion_value)
         emotion.setText(f'情绪值：{emotion_value}')
 
         # define reflect of color
@@ -112,18 +116,19 @@ class ChatBoxView(QWidget):
         self.content_vbox.addWidget(ChatBubbleItem(msg['sender'], msg['msg'], msg['type']),
                                     alignment=alignment)
 
-    def add_all_bubbles_thread(self):
+    def add_all_bubbles_thread(self, parent):
         self.bar = IndeterminateProgressBar(self)
         self.v_box_layout.addWidget(self.bar, alignment=Qt.AlignCenter)
 
         self.work = AddBubble()
         self.work.add_component.connect(self.add_bubble)
-        self.work.finished.connect(self.on_finished)
+        self.work.finished.connect(functools.partial(self.on_finished, parent))
         self.work.error.connect(self.handle_error)
 
         self.work.start()
 
-    def on_finished(self):
+    def on_finished(self, parent):
+        parent.draw_chart()
         if self.bar:
             self.bar.deleteLater()
 
@@ -166,11 +171,32 @@ class OperationView(QWidget):
         # global vertical layout
         self.v_box_layout = QVBoxLayout(self)
 
-    def add_btn(self, chat_box_widget):
+    def add_btn(self, parent):
         btn_get_msg = PushButton('获取当前微信窗口的聊天记录', self)
-        btn_get_msg.clicked.connect(chat_box_widget.add_all_bubbles_thread)
+        btn_get_msg.clicked.connect(functools.partial(parent.chat_box_view.add_all_bubbles_thread, parent.chart_view))
 
         self.v_box_layout.addWidget(btn_get_msg)
+
+
+class ChartView(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
+
+        self.v_box_layout = QVBoxLayout(self)
+        self.chart = QtCharts.QChart()
+        chart_view = QtCharts.QChartView(self.chart)
+        self.v_box_layout.addWidget(chart_view)
+
+        self.chart.setTitle("情绪折线图")
+
+    def draw_chart(self):
+        series = QtCharts.QLineSeries()
+        # 添加数据点
+        for i, value in enumerate(EMOTIONS):
+            series.append(i, value)
+
+        self.chart.addSeries(series)
+        self.chart.createDefaultAxes()
 
 
 class ChatInterface(QFrame):
@@ -179,12 +205,14 @@ class ChatInterface(QFrame):
         self.setObjectName('chat_interface')
 
         # global vertical layout
-        v_box_layout = QVBoxLayout(self)
+        self.v_box_layout = QVBoxLayout(self)
 
-        chat_box_view = ChatBoxView(self)
+        self.chat_box_view = ChatBoxView(self)
         operation_view = OperationView(self)
+        self.chart_view = ChartView(self)
 
-        operation_view.add_btn(chat_box_view)
+        operation_view.add_btn(self)
 
-        v_box_layout.addWidget(chat_box_view)
-        v_box_layout.addWidget(operation_view)
+        self.v_box_layout.addWidget(self.chat_box_view)
+        self.v_box_layout.addWidget(operation_view)
+        self.v_box_layout.addWidget(self.chart_view)
