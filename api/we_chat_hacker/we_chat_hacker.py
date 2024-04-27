@@ -56,9 +56,15 @@ class WeChatHacker:
         uia.SetGlobalSearchTimeout(0.1)
         self._we_chat_window = None
         self.user_name = None
+        self.cached = False
+        self.msg_cache = []
 
         self.if_pressed = False
         keyboard.add_hotkey('ctrl+alt', self._hotkey_handler)
+
+    def is_cached(self):
+        """返回是否有缓存数据"""
+        return self.cached
 
     def _hotkey_handler(self):
         self.if_pressed = True
@@ -82,7 +88,7 @@ class WeChatHacker:
         :return: list of message dictionary, len(return) == 0 means LookupError
         """
         if cache:
-            return MSG_CACHE
+            return self.msg_cache
 
         self._we_chat_window.Show(0)
 
@@ -122,6 +128,7 @@ class WeChatHacker:
                 'type': v
             })
 
+        self.msg_cache = messages
         return messages
 
     def get_current_dialog_name(self):
