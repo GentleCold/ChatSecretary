@@ -5,8 +5,10 @@ Version: 1.0.1
 """
 from typing import List
 
-import uiautomation as uia
 import keyboard
+import uiautomation as uia
+
+MSG_CACHE = []
 
 
 class MessageType:
@@ -73,11 +75,14 @@ class WeChatHacker:
             return ''
         return self.user_name
 
-    def get_all_current_message(self) -> List:
+    def get_all_current_message(self, cache=False) -> List:
         """
         Get all messages of the current dialog
+        :param cache: if cache is true, then read from cache
         :return: list of message dictionary, len(return) == 0 means LookupError
         """
+        if cache:
+            return MSG_CACHE
 
         self._we_chat_window.Show(0)
 
