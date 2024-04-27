@@ -9,7 +9,7 @@ import keyboard
 import uiautomation as uia
 
 MSG_CACHE = []
-
+IS_CACHED = False
 
 class MessageType:
     TIME = 0  # 时间
@@ -56,15 +56,13 @@ class WeChatHacker:
         uia.SetGlobalSearchTimeout(0.1)
         self._we_chat_window = None
         self.user_name = None
-        self.cached = False
-        self.msg_cache = []
 
         self.if_pressed = False
         keyboard.add_hotkey('ctrl+alt', self._hotkey_handler)
 
     def is_cached(self):
         """返回是否有缓存数据"""
-        return self.cached
+        return IS_CACHED
 
     def _hotkey_handler(self):
         self.if_pressed = True
@@ -88,7 +86,7 @@ class WeChatHacker:
         :return: list of message dictionary, len(return) == 0 means LookupError
         """
         if cache:
-            return self.msg_cache
+            return MSG_CACHE
 
         self._we_chat_window.Show(0)
 
@@ -128,7 +126,8 @@ class WeChatHacker:
                 'type': v
             })
 
-        self.msg_cache = messages
+        MSG_CACHE.clear()
+        MSG_CACHE.extend(messages)
         return messages
 
     def get_current_dialog_name(self):
