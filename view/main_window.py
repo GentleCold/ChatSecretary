@@ -1,18 +1,14 @@
-import os
-
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QApplication, QFrame, QHBoxLayout, QWidget
-from qfluentwidgets import (NavigationItemPosition, MessageBox, setTheme, Theme, FluentWindow,
-                            NavigationAvatarWidget, qrouter, SubtitleLabel, setFont, InfoBadge,
-                            InfoBadgePosition, NavigationWidget)
+from PySide6.QtWidgets import QApplication
 from qfluentwidgets import FluentIcon as Icon
+from qfluentwidgets import (NavigationItemPosition, FluentWindow)
 
 from view.chat_interface import ChatInterface
-from view.home_interface import HomeInterface
 from view.graph_interface import GraphInterface
+from view.home_interface import HomeInterface
+from view.sender_interface import SenderInterface
 from view.settings_interface import SettingsInterface
 from view.timegraph_interface import TimeGraphInterface
+
 
 class MainWindow(FluentWindow):
     """
@@ -28,6 +24,7 @@ class MainWindow(FluentWindow):
         self.graph_interface = GraphInterface(self)
         self.timegraph_interface = TimeGraphInterface(self)
         self.settings_interface = SettingsInterface(self)
+        self.sender_interface = SenderInterface(self)
 
         self._init_navigation()
         self._init_window()
@@ -38,6 +35,7 @@ class MainWindow(FluentWindow):
         """
         self.addSubInterface(self.home_interface, Icon.HOME, '主页')
         self.addSubInterface(self.chat_interface, Icon.CHAT, '聊天')
+        self.addSubInterface(self.sender_interface, Icon.SEND, '定时发送')
         self.addSubInterface(self.graph_interface, Icon.TILES, '图表')
         self.addSubInterface(self.timegraph_interface, Icon.MARKET, '时间图')
 
