@@ -14,6 +14,8 @@ from view.settings_interface import SettingsInterface
 from view.timegraph_interface import TimeGraphInterface
 from view.visual_dashboard_interface import VisualDashboardInterface
 
+from common.signal_bus import signalBus
+
 
 class MainWindow(FluentWindow):
     """
@@ -34,6 +36,7 @@ class MainWindow(FluentWindow):
         self.sender_interface = SenderInterface(self)
 
         self._init_navigation()
+        self.__init_signal_connection()
         # 延时启动页面
         loop = QEventLoop(self)
         QTimer.singleShot(2000, loop.quit)
@@ -78,3 +81,6 @@ class MainWindow(FluentWindow):
         self.move(w // 2 - self.width() // 2, h // 2 - self.height() // 2)
         self.show()
         QApplication.processEvents()
+
+    def __init_signal_connection(self):
+        signalBus.micaEnableChanged.connect(self.setMicaEffectEnabled)
