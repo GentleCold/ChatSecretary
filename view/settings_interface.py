@@ -163,3 +163,6 @@ class SettingsInterface(ScrollArea):
                 background-color: transparent;
             }
             """)
+
+    def changeMica(self, value):
+        self.micaSettingCard.setValue(value)
