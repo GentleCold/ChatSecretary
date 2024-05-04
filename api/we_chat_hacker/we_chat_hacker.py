@@ -8,8 +8,6 @@ from typing import List
 import keyboard
 import uiautomation as uia
 
-MSG_CACHE = []
-IS_CACHED = False
 
 class MessageType:
     TIME = 0  # 时间
@@ -51,6 +49,8 @@ class WeChatHacker:
     """
     Used for WeChat manipulation
     """
+    msgs_cache = []
+    cached = False
 
     def __init__(self):
         uia.SetGlobalSearchTimeout(0.1)
@@ -60,9 +60,10 @@ class WeChatHacker:
         self.if_pressed = False
         keyboard.add_hotkey('ctrl+alt', self._hotkey_handler)
 
-    def is_cached(self):
+    @staticmethod
+    def is_cached():
         """返回是否有缓存数据"""
-        return IS_CACHED
+        return WeChatHacker.cached
 
     def _hotkey_handler(self):
         self.if_pressed = True
@@ -86,7 +87,7 @@ class WeChatHacker:
         :return: list of message dictionary, len(return) == 0 means LookupError
         """
         if cache:
-            return MSG_CACHE
+            return WeChatHacker.msgs_cache
 
         self._we_chat_window.Show(0)
 
@@ -126,8 +127,9 @@ class WeChatHacker:
                 'type': v
             })
 
-        MSG_CACHE.clear()
-        MSG_CACHE.extend(messages)
+        WeChatHacker.msgs_cache.clear()
+        WeChatHacker.msgs_cache.extend(messages)
+        WeChatHacker.cached = True
         return messages
 
     def get_current_dialog_name(self):
