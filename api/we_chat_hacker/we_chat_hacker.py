@@ -7,6 +7,7 @@ from typing import List
 
 import keyboard
 import uiautomation as uia
+from enum import Enum
 
 
 class MessageType:
@@ -45,11 +46,20 @@ class AutoUtils:
         element.DoubleClick()
 
 
+class MsgType(Enum):
+    TIME = 0,
+    SPEAK = 3
+
+
 class WeChatHacker:
     """
     Used for WeChat manipulation
     """
     msgs_cache = []
+    # 分词后的记录
+    word_cache = {}
+    # 发言数量记录（每个人发了多少条消息）
+    speaker_msg_count = {}
     cached = False
 
     def __init__(self):
@@ -59,6 +69,23 @@ class WeChatHacker:
 
         self.if_pressed = False
         keyboard.add_hotkey('ctrl+alt', self._hotkey_handler)
+
+    @staticmethod
+    def analyse_message():
+        WeChatHacker.speaker_msg_count.clear()
+        if not WeChatHacker.cached:
+            return
+        else:
+            for m in WeChatHacker.msgs_cache:
+                if m['type'] == MsgType.SPEAK.value:
+                    if m['sender'] in WeChatHacker.speaker_msg_count:
+                        WeChatHacker.speaker_msg_count[m['sender']] += 1
+                    else:
+                        WeChatHacker.speaker_msg_count[m['sender']] = 1
+
+    @staticmethod
+    def get_speaker_msg_count():
+        return WeChatHacker.speaker_msg_count
 
     @staticmethod
     def is_cached():
