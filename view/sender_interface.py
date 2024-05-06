@@ -10,7 +10,6 @@ from qfluentwidgets.components.widgets.menu import TextEditMenu
 from qfluentwidgets.components.widgets.spin_box import SpinBoxBase
 
 from api.we_chat_hacker.we_chat_hacker import WeChatHacker
-from qframelesswindow
 
 
 class SendMsg(QThread):
