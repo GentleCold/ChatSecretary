@@ -3,7 +3,9 @@ Author: GentleCold@qq.com
 Reference: https://github.com/LTEnjoy/easyChat/blob/main/ui_auto_wechat.py
 Version: 1.0.1
 """
+import time
 from typing import List
+import pyperclip
 
 import keyboard
 import uiautomation as uia
@@ -287,6 +289,25 @@ class WeChatHacker:
                 return name[:rIndex]
         return name
 
+    def get_contact(self, name):
+        search_box = uia.EditControl(Depth=8, Name="搜索")
+        AutoUtils.click(search_box)
+
+        pyperclip.copy(name)
+        uia.SendKeys("{Ctrl}v")
+        # 等待客户端搜索联系人
+        time.sleep(0.1)
+        search_box.SendKeys("{enter}")
+
+    def send_msg(self, name, text):
+        self.get_contact(name)
+        pyperclip.copy(text)
+        uia.SendKeys("{Ctrl}v")
+
+        # 获取发送按钮
+        send_button = uia.ButtonControl(Depth=15, Name="发送(S)")
+        AutoUtils.click(send_button)
+
     @staticmethod
     def _detect_type(message_control):
         """
@@ -319,5 +340,5 @@ class WeChatHacker:
 if __name__ == '__main__':
     we = WeChatHacker()
     we.check_if_login_wechat()
-    print(we.get_all_current_message())
+    we.send_msg('李泽朋', '测试')
     # print(we.get_current_dialog_name())

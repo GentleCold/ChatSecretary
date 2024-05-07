@@ -1,21 +1,86 @@
-from PySide6.QtCore import Qt, QDateTime
-from PySide6.QtWidgets import QFrame, QVBoxLayout, QDateTimeEdit, QTextEdit, QHBoxLayout
+import time
+
+from PySide6.QtCore import Qt, QDateTime, QThread, Signal
+from PySide6.QtWidgets import QFrame, QVBoxLayout, QDateTimeEdit, QTextEdit, QHBoxLayout, QWidget
 from qfluentwidgets import (SubtitleLabel,
-                            MessageBoxBase, PushButton, FluentStyleSheet, setFont, SmoothScrollDelegate, BodyLabel)
+                            MessageBoxBase, PushButton, FluentStyleSheet, setFont, SmoothScrollDelegate, BodyLabel,
+                            PushSettingCard, FluentIcon, SmoothScrollArea, InfoBar, InfoBarPosition)
 from qfluentwidgets.components.widgets.line_edit import EditLayer, LineEdit
 from qfluentwidgets.components.widgets.menu import TextEditMenu
 from qfluentwidgets.components.widgets.spin_box import SpinBoxBase
 
+from api.we_chat_hacker.we_chat_hacker import WeChatHacker
 
-class Task(PushButton):
+
+class SendMsg(QThread):
+    duration = 0
+    receiver = ''
+    msg = ''
+
+    finished = Signal()
+    add_component = Signal(object)
+    error = Signal()
+
+    def run(self):
+        time.sleep(self.duration)
+
+        we_chat_hacker = WeChatHacker()
+        # check
+        username = we_chat_hacker.check_if_login_wechat()
+        if username == '':
+            self.error.emit()
+            return
+
+        we_chat_hacker.send_msg(self.receiver, self.msg)
+
+
+class Task(QFrame):
     def __init__(self, receiver, datetime, msg, parent=None):
         super().__init__(parent=parent)
 
         # global vertical layout
         h_box_layout = QHBoxLayout(self)
-        h_box_layout.addWidget(BodyLabel(datetime, self))
-        h_box_layout.addWidget(BodyLabel('接收者: ' + receiver, self))
-        h_box_layout.addWidget(BodyLabel('消息: ' + msg, self))
+        # h_box_layout.addWidget(BodyLabel(datetime, self))
+        # h_box_layout.addWidget(BodyLabel('接收者: ' + receiver, self))
+        # h_box_layout.addWidget(BodyLabel('消息: ' + msg, self))
+
+        self.task = PushSettingCard(
+            "取消",
+            FluentIcon.TAG,
+            f"{datetime.toString('yyyy-MM-dd hh:mm:ss')}: to {receiver} with {msg}",
+            parent=self,
+        )
+        self.task.clicked.connect(self.delete)
+
+        h_box_layout.addWidget(self.task)
+
+        # start thread of send msg
+        self.work = SendMsg()
+        self.work.duration = datetime.toSecsSinceEpoch() - time.time()
+        self.work.receiver = receiver
+        self.work.msg = msg
+
+        self.work.finished.connect(self.on_finished)
+        self.work.error.connect(self.handle_error)
+
+        self.work.start()
+
+    def on_finished(self):
+        self.deleteLater()
+
+    def handle_error(self):
+        InfoBar.info(
+            title='警告',
+            content="请保持微信窗口的存在",
+            orient=Qt.Horizontal,
+            isClosable=True,
+            position=InfoBarPosition.TOP_RIGHT,
+            duration=2000,
+            parent=self,
+        )
+
+    def delete(self):
+        self.deleteLater()
 
 
 class TextEdit(QTextEdit):
@@ -79,15 +144,40 @@ class SenderInterface(QFrame):
 
         # global vertical layout
         self.v_box_layout = QVBoxLayout(self)
-        self.v_box_layout.setSpacing(0)
-        self.v_box_layout.setContentsMargins(0, 0, 0, 0)
+
+        # scroll area widget
+        content = QWidget()
+
+        scroll_area = SmoothScrollArea()
+
+        # scroll area settings
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setWidget(content)
+        scroll_area.setViewportMargins(0, 5, 0, 5)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll_area.setStyleSheet('background-color: transparent;')
+
+        # content layout
+        self.content_vbox = QVBoxLayout(content)
+        self.content_vbox.setSpacing(0)
+
+        # add scroll area
+        self.v_box_layout.addWidget(scroll_area)
+
+        # style settings
+        self.setStyleSheet('border: none;')
 
         button = PushButton('添加定时任务')
         button.clicked.connect(self.addTask)
-        self.v_box_layout.addWidget(button, alignment=Qt.AlignTop)
+        button.setContentsMargins(0, 0, 0, 0)
+        self.content_vbox.addWidget(button, alignment=Qt.AlignTop)
+        self.content_vbox.addStretch()
 
     def addTask(self):
         w = CustomMessageBox(self.window())
         if w.exec():
-            self.v_box_layout.addWidget(Task(w.lineEdit.text(), w.time.dateTime().toString(), w.textEdit.toPlainText()),
-                                        alignment=Qt.AlignTop)
+            task = Task(w.lineEdit.text(), w.time.dateTime(), w.textEdit.toPlainText())
+            task.setContentsMargins(0, 0, 0, 0)
+            self.content_vbox.removeItem(self.content_vbox.itemAt(self.content_vbox.count() - 1))
+            self.content_vbox.addWidget(task, alignment=Qt.AlignTop)
+            self.content_vbox.addStretch()
