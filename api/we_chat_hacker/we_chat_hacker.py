@@ -8,6 +8,8 @@ from typing import List
 import keyboard
 import uiautomation as uia
 from enum import Enum
+import jieba
+from common.utils import get_stopwords, is_today
 
 
 class MessageType:
@@ -46,21 +48,22 @@ class AutoUtils:
         element.DoubleClick()
 
 
-class MsgType(Enum):
-    TIME = 0,
-    SPEAK = 3
-
-
 class WeChatHacker:
     """
     Used for WeChat manipulation
     """
+    msgs_time = {}
     msgs_cache = []
     # 分词后的记录
     word_cache = {}
+    # 分词记录（区分人）
+    word_person = {}
     # 发言数量记录（每个人发了多少条消息）
     speaker_msg_count = {}
     cached = False
+    interactive_count = {}
+    today_interactive_count = {}
+    topic_started_num = {}
 
     def __init__(self):
         uia.SetGlobalSearchTimeout(0.1)
@@ -72,16 +75,121 @@ class WeChatHacker:
 
     @staticmethod
     def analyse_message():
+        stopwords = get_stopwords("./resource/stopwords/stopwords.txt")
         WeChatHacker.speaker_msg_count.clear()
+        WeChatHacker.word_cache.clear()
+        WeChatHacker.msgs_time.clear()
+        WeChatHacker.interactive_count.clear()
+        WeChatHacker.topic_started_num.clear()
+        WeChatHacker.word_person.clear()
+        # 初始化msgs_time['self']
+        WeChatHacker.msgs_time['self'] = []
+        for i in range(12):
+            WeChatHacker.msgs_time['self'].append(0)
+        # 初始化interactive_count['self']
+        WeChatHacker.interactive_count['self'] = {}
+        WeChatHacker.today_interactive_count['self'] = {}
+
         if not WeChatHacker.cached:
             return
         else:
+            is_first_msg = False
+            time = ''
+            hour = ''
+            # 互动集合（这段时间内这个集合内的人在互动）
+            temp_self_interactive_set = set([])
             for m in WeChatHacker.msgs_cache:
-                if m['type'] == MsgType.SPEAK.value:
+                if m['type'] == MessageType.USER_MESSAGE:
+                    # 初始化人，如果该发言者没有在统计量中，则初始化他
+                    if m['sender'] not in WeChatHacker.word_person:
+                        WeChatHacker.word_person[m['sender']] = {}
+
+                    # 记录话题发起统计量
+                    if is_first_msg:
+                        is_first_msg = False
+                        if m['sender'] in WeChatHacker.topic_started_num:
+                            WeChatHacker.topic_started_num[m['sender']] += 1
+                        else:
+                            WeChatHacker.topic_started_num[m['sender']] = 1
+
                     if m['sender'] in WeChatHacker.speaker_msg_count:
                         WeChatHacker.speaker_msg_count[m['sender']] += 1
                     else:
                         WeChatHacker.speaker_msg_count[m['sender']] = 1
+
+                    words = jieba.cut(m['msg'])
+                    for word in words:
+                        word = word.strip()
+                        if word and word not in stopwords:
+                            if word in WeChatHacker.word_cache:
+                                WeChatHacker.word_cache[word] += 1
+                            else:
+                                WeChatHacker.word_cache[word] = 1
+                            # 记录每个人的话题记录统计量
+                            if word in WeChatHacker.word_person[m['sender']]:
+                                WeChatHacker.word_person[m['sender']][word] += 1
+                            else:
+                                WeChatHacker.word_person[m['sender']][word] = 1
+
+                    if m['sender'] in WeChatHacker.msgs_time:
+                        temp_hour = int(hour)+1
+                        if temp_hour == 24:
+                            temp_hour = 0
+                        WeChatHacker.msgs_time[m['sender']][int(temp_hour/2)] += 1
+                    temp_self_interactive_set.add(m['sender'])
+
+                if m['type'] == MessageType.TIME:
+                    # 每次时间改变，都要将is_first_msg设置成True，为了记录话题发起者统计量
+                    is_first_msg = True
+                    # 每次时间改变，都要更新一次互动集合
+                    for key in WeChatHacker.interactive_count.keys():
+                        if key in temp_self_interactive_set:
+                            for person in temp_self_interactive_set:
+                                if person != key:
+                                    if person in WeChatHacker.interactive_count[key]:
+                                        WeChatHacker.interactive_count[key][person] += 1
+                                    else:
+                                        WeChatHacker.interactive_count[key][person] = 1
+                                    # 如果时间是今天，那么也需要单独更新今天互动的统计量
+                                    if is_today(time):
+                                        if person in WeChatHacker.today_interactive_count[key]:
+                                            WeChatHacker.today_interactive_count[key][person] += 1
+                                        else:
+                                            WeChatHacker.today_interactive_count[key][person] = 1
+
+                    temp_self_interactive_set.clear()
+
+                    time = m['msg']
+                    first_index = time.find(' ')
+                    if first_index == -1:
+                        first_index = 0
+                    else:
+                        first_index += 1
+                    hour = time[first_index:time.find(':')]
+
+    @staticmethod
+    def get_word_person():
+        return WeChatHacker.word_person
+
+    @staticmethod
+    def get_topic_started_num():
+        return WeChatHacker.topic_started_num
+
+    @staticmethod
+    def get_interactive_count():
+        return WeChatHacker.interactive_count
+
+    @staticmethod
+    def get_today_interactive_count():
+        return WeChatHacker.today_interactive_count
+
+    @staticmethod
+    def get_msg_time():
+        return WeChatHacker.msgs_time
+
+    @staticmethod
+    def get_word_cache():
+        return WeChatHacker.word_cache
 
     @staticmethod
     def get_speaker_msg_count():

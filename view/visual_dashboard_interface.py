@@ -11,13 +11,10 @@ from qfluentwidgets import setTheme, Theme
 from qframelesswindow.webengine import FramelessWebEngineView
 from common.config import cfg
 from common.signal_bus import signalBus
-from pyecharts.charts import Line, Liquid, Bar
-from pyecharts.faker import Faker
+from pyecharts.charts import Line, Liquid, Bar, Gauge, PictorialBar, Pie, Bar3D
+from pyecharts.options import GaugePointerOpts, GaugeDetailOpts, GaugeTitleOpts, LabelOpts
 import pyecharts.options as opts
-
-
-def test1(a):
-    print(a)
+from pyecharts.globals import SymbolType
 
 
 class VisualDashboardInterface(QFrame):
@@ -62,6 +59,30 @@ class VisualDashboardInterface(QFrame):
         self.render_speak_count_bar()
         self.widget7.settings().setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
         self.widget7.load(QUrl.fromLocalFile(basic_path + "\\dashboard_charts\\speak_count_bar.html"))
+
+        self.render_word_bar()
+        self.widget9.settings().setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
+        self.widget9.load(QUrl.fromLocalFile(basic_path + "\\dashboard_charts\\word_bar.html"))
+
+        self.render_time_line()
+        self.widget10.settings().setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
+        self.widget10.load(QUrl.fromLocalFile(basic_path + "\\dashboard_charts\\time_line.html"))
+
+        self.render_interactive_gauge()
+        self.widget4.settings().setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
+        self.widget4.load(QUrl.fromLocalFile(basic_path + "\\dashboard_charts\\today_interactive_liquid.html"))
+
+        self.render_intimacy_pictorialbar()
+        self.widget5.settings().setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
+        self.widget5.load(QUrl.fromLocalFile(basic_path + "\\dashboard_charts\\intimacy_pictorialbar.html"))
+
+        self.render_topic_started_pie()
+        self.widget8.settings().setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
+        self.widget8.load(QUrl.fromLocalFile(basic_path + "\\dashboard_charts\\topic_pie.html"))
+
+        self.render_word_person_3dBar()
+        self.widget2.settings().setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
+        self.widget2.load(QUrl.fromLocalFile(basic_path + "\\dashboard_charts\\word_person_3dBar.html"))
 
         # self.widget5.setZoomFactor(0.1)
         # self.widget6.setZoomFactor(0.15)
@@ -231,7 +252,7 @@ class VisualDashboardInterface(QFrame):
                 width="380px",
                 height="190px",
             ))
-            .add("lq",
+            .add("发言人数比例",
                  [len(speak_today) / int(total_count)],
                  label_opts=opts.LabelOpts(
                      font_size=20,
@@ -281,4 +302,180 @@ class VisualDashboardInterface(QFrame):
             .render("dashboard_charts/speak_count_bar.html")
         )
 
+    def render_word_bar(self):
+        word_cache = self.hacker.get_word_cache()
+        sorted_word_cache = sorted(word_cache.items(), key=lambda x: x[1], reverse=True)
+        data = sorted_word_cache[:6]
+        data.reverse()
 
+        (
+            Bar(init_opts=opts.InitOpts(
+                width="380px",
+                height="255px",
+            ))
+            .add_xaxis([item[0] for item in data])
+            .add_yaxis("num", [item[1] for item in data])
+            .reversal_axis()
+            .set_global_opts(
+                title_opts=opts.TitleOpts(title="群聊最热词"),
+                legend_opts=opts.LegendOpts(is_show=False),
+            )
+            .render("dashboard_charts/word_bar.html")
+        )
+
+    def render_time_line(self):
+        x = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
+        msgs_time = self.hacker.get_msg_time()
+
+        (
+            Line(init_opts=opts.InitOpts(
+                width="400px",
+                height="240px",
+            ))
+            .add_xaxis(xaxis_data=x)
+            .add_yaxis(
+                series_name="num",
+                y_axis=msgs_time['self'],
+                is_smooth=True,
+            )
+            .set_global_opts(
+                title_opts=opts.TitleOpts(title="时辰活跃度"),
+                legend_opts=opts.LegendOpts(is_show=False),
+            )
+            .set_series_opts(
+                areastyle_opts=opts.AreaStyleOpts(opacity=0.3)
+            )
+            .render("dashboard_charts/time_line.html")
+        )
+
+    def render_interactive_gauge(self):
+        interactive_count = self.hacker.get_today_interactive_count()
+        total_count = self.hacker.get_current_dialog_name()[
+                      self.hacker.get_current_dialog_name().rfind('(') + 1:self.hacker.get_current_dialog_name().rfind(
+                          ')')
+                      ]
+
+        (
+            Liquid(init_opts=opts.InitOpts(
+                width="380px",
+                height="190px",
+            ))
+            .add("发言人数比例",
+                 [len(interactive_count.items()) / int(total_count)],
+                 label_opts=opts.LabelOpts(
+                     font_size=20,
+                 ),
+                 shape=SymbolType.DIAMOND,
+            )
+            .set_global_opts(
+                title_opts=opts.TitleOpts(title="今日互动比例"),
+            )
+            .render("dashboard_charts/today_interactive_liquid.html")
+        )
+
+    def render_intimacy_pictorialbar(self):
+        interactive_count = self.hacker.get_interactive_count()
+        self_interactive_count = interactive_count['self']
+        self_interactive_count = sorted(self_interactive_count.items(), key=lambda x: x[1])
+
+        (
+            PictorialBar(init_opts=opts.InitOpts(
+                width="400px",
+                height="240px",
+            ))
+            .add_xaxis([item[0] for item in self_interactive_count[0:6]])
+            .add_yaxis(
+                "intimacy",
+                [item[1] for item in self_interactive_count[0:6]],
+                label_opts=opts.LabelOpts(is_show=False),
+                symbol_size=18,
+                symbol_repeat="fixed",
+                symbol_offset=[0, 0],
+                is_symbol_clip=True,
+                symbol=SymbolType.ROUND_RECT,
+            )
+            .reversal_axis()
+            .set_global_opts(
+                title_opts=opts.TitleOpts(title="亲密度"),
+                xaxis_opts=opts.AxisOpts(is_show=False),
+                yaxis_opts=opts.AxisOpts(
+                    axistick_opts=opts.AxisTickOpts(is_show=False),
+                    axisline_opts=opts.AxisLineOpts(
+                        linestyle_opts=opts.LineStyleOpts(opacity=0)
+                    ),
+                ),
+                legend_opts=opts.LegendOpts(is_show=False),
+            )
+            .render("dashboard_charts/intimacy_pictorialbar.html")
+        )
+
+    def render_topic_started_pie(self):
+        topic_started_num = self.hacker.get_topic_started_num()
+        topic_started_num = sorted(topic_started_num.items(), key=lambda x: x[1])
+
+        (
+            Pie(init_opts=opts.InitOpts(
+                width="400px",
+                height="240px",
+            ))
+            .add(
+                "话题发起比例",
+                topic_started_num[:10],
+                radius=["30%", "75%"],
+                rosetype="radius",
+                label_opts=opts.LabelOpts(is_show=False),
+            )
+            .set_global_opts(title_opts=opts.TitleOpts(title="话题发起比例"), legend_opts=opts.LegendOpts(is_show=False),)
+            .render("dashboard_charts/topic_pie.html")
+        )
+
+    def render_word_person_3dBar(self):
+        word_person = self.hacker.get_word_person()
+        word_count = self.hacker.get_word_cache()
+        sorted_word_count = sorted(word_count.items(), key=lambda x: x[1], reverse=True)
+        speak_count = self.hacker.get_speaker_msg_count()
+        sorted_speak_count = sorted(speak_count.items(), key=lambda x: x[1], reverse=True)
+
+        word_chosen = [item[0] for item in sorted_word_count[:12]]
+        speaker_chosen = [item[0] for item in sorted_speak_count[:6]]
+
+        data = []
+
+        for index1, word in enumerate(word_chosen):
+            for index2, speaker in enumerate(speaker_chosen):
+                if word in word_person[speaker]:
+                    data.append([index1, index2, word_person[speaker][word]])
+
+        print(word_person)
+        print(word_chosen)
+        print(data)
+
+        (
+            Bar3D()
+            .add(
+                series_name="",
+                data=data,
+                xaxis3d_opts=opts.Axis3DOpts(type_="category", data=word_chosen, axislabel_opts=LabelOpts(interval=0)),
+                yaxis3d_opts=opts.Axis3DOpts(type_="category", data=speaker_chosen),
+                zaxis3d_opts=opts.Axis3DOpts(type_="value"),
+            )
+            .set_global_opts(
+                visualmap_opts=opts.VisualMapOpts(
+                    max_=20,
+                    range_color=[
+                        "#313695",
+                        "#4575b4",
+                        "#74add1",
+                        "#abd9e9",
+                        "#e0f3f8",
+                        "#ffffbf",
+                        "#fee090",
+                        "#fdae61",
+                        "#f46d43",
+                        "#d73027",
+                        "#a50026",
+                    ],
+                )
+            )
+            .render("dashboard_charts/word_person_3dBar.html")
+        )
