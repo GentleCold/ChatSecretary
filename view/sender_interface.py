@@ -3,14 +3,13 @@ import time
 from PySide6.QtCore import Qt, QDateTime, QThread, Signal
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QDateTimeEdit, QTextEdit, QHBoxLayout, QWidget
 from qfluentwidgets import (SubtitleLabel,
-                            MessageBoxBase, PushButton, FluentStyleSheet, setFont, SmoothScrollDelegate, BodyLabel,
-                            PushSettingCard, FluentIcon, SmoothScrollArea, InfoBar, InfoBarPosition)
+                            MessageBoxBase, FluentStyleSheet, setFont, SmoothScrollDelegate, BodyLabel,
+                            PushSettingCard, FluentIcon, SmoothScrollArea, InfoBar, InfoBarPosition, PrimaryPushButton)
 from qfluentwidgets.components.widgets.line_edit import EditLayer, LineEdit
 from qfluentwidgets.components.widgets.menu import TextEditMenu
 from qfluentwidgets.components.widgets.spin_box import SpinBoxBase
 
 from api.we_chat_hacker.we_chat_hacker import WeChatHacker
-from qframelesswindow
 
 
 class SendMsg(QThread):
@@ -40,7 +39,7 @@ class Task(QFrame):
         super().__init__(parent=parent)
 
         # global vertical layout
-        h_box_layout = QHBoxLayout(self)
+        self.h_box_layout = QHBoxLayout(self)
         # h_box_layout.addWidget(BodyLabel(datetime, self))
         # h_box_layout.addWidget(BodyLabel('接收者: ' + receiver, self))
         # h_box_layout.addWidget(BodyLabel('消息: ' + msg, self))
@@ -51,9 +50,10 @@ class Task(QFrame):
             f"{datetime.toString('yyyy-MM-dd hh:mm:ss')}: to {receiver} with {msg}",
             parent=self,
         )
+        self.task.button.setStyleSheet('background-color: #f7768e;')
         self.task.clicked.connect(self.delete)
 
-        h_box_layout.addWidget(self.task)
+        self.h_box_layout.addWidget(self.task)
 
         # start thread of send msg
         self.work = SendMsg()
@@ -67,7 +67,11 @@ class Task(QFrame):
         self.work.start()
 
     def on_finished(self):
-        self.deleteLater()
+        self.task.button.setText("完成")
+        self.task.button.setStyleSheet('background-color: #9ece6a;')
+
+    def nothing(self):
+        pass
 
     def handle_error(self):
         InfoBar.info(
@@ -168,10 +172,17 @@ class SenderInterface(QFrame):
         # style settings
         self.setStyleSheet('border: none;')
 
-        button = PushButton('添加定时任务')
+        button = PrimaryPushButton('添加定时任务')
         button.clicked.connect(self.addTask)
         button.setContentsMargins(0, 0, 0, 0)
-        self.content_vbox.addWidget(button, alignment=Qt.AlignTop)
+
+        b = QWidget()
+        self.h_box_layout = QHBoxLayout(b)
+        self.h_box_layout.addStretch()
+        self.h_box_layout.addWidget(button)
+        self.h_box_layout.addStretch()
+
+        self.content_vbox.addWidget(b, alignment=Qt.AlignTop)
         self.content_vbox.addStretch()
 
     def addTask(self):

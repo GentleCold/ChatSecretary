@@ -1,17 +1,15 @@
 import functools
 
+import matplotlib.colors as mc
+import matplotlib.pyplot as plt
 from PySide6 import QtCharts
-from PySide6.QtCore import Qt, QEasingCurve, QThread, Signal, Slot
-from PySide6.QtGui import QPainter, QColor, QFont, QFontMetrics
-from PySide6.QtWidgets import QHBoxLayout, QFrame, QWidget, QVBoxLayout, QListWidgetItem, QListWidget, QLineEdit, \
-    QPushButton, QSizePolicy
-from qfluentwidgets import SmoothScrollArea, SubtitleLabel, StrongBodyLabel, BodyLabel, PushButton, MessageBox, \
-    IndeterminateProgressBar, InfoBarPosition, InfoBar, ComboBox
+from PySide6.QtCore import Qt, QThread, Signal, Slot
+from PySide6.QtWidgets import QFrame, QWidget, QVBoxLayout
+from qfluentwidgets import SmoothScrollArea, BodyLabel, PushButton, IndeterminateProgressBar, InfoBarPosition, InfoBar, \
+    ComboBox
+from snownlp import SnowNLP
 
 from api.we_chat_hacker.we_chat_hacker import WeChatHacker
-from snownlp import SnowNLP
-import matplotlib.pyplot as plt
-import matplotlib.colors as mc
 
 EMOTIONS = {}
 
@@ -235,8 +233,12 @@ class ChatInterface(QFrame):
         operation_view = OperationView(self)
         self.chart_view = ChartView(self)
 
-        operation_view.add_btn(self)
+        # operation_view.add_btn(self)
 
         self.v_box_layout.addWidget(self.chat_box_view)
         self.v_box_layout.addWidget(self.chart_view)
         self.v_box_layout.addWidget(operation_view)
+
+    def showEvent(self, evt):
+        self.chat_box_view.add_all_bubbles_thread(self.chart_view)
+        QWidget.showEvent(self, evt)
