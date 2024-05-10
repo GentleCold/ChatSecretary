@@ -1,4 +1,5 @@
 import os
+import time
 
 from PySide6.QtCore import QSize, QEventLoop, QTimer
 from PySide6.QtGui import QIcon
@@ -37,11 +38,14 @@ class MainWindow(FluentWindow):
 
         self._init_navigation()
         self.__init_signal_connection()
+        # self.settings_interface.changeMica(False)
+        # self.settings_interface.changeMica(True)
         # 延时启动页面
         loop = QEventLoop(self)
         QTimer.singleShot(2000, loop.quit)
         loop.exec()
         self.splashScreen.finish()
+        self.fixWebEngine()
 
     def _init_navigation(self):
         """
@@ -84,3 +88,9 @@ class MainWindow(FluentWindow):
 
     def __init_signal_connection(self):
         signalBus.micaEnableChanged.connect(self.setMicaEffectEnabled)
+
+    def fixWebEngine(self):
+        # webengineview加载后会有显示bug，这样设置一下可以修复
+        # TODO 会显示 NoneType object is not callable的错误
+        self.settings_interface.changeMica(False)
+        self.settings_interface.changeMica(True)
