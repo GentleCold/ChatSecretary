@@ -1,7 +1,8 @@
 import os
 
+from PySide6.QtGui import QPalette, QPixmap, QBrush, QPainter, QColor
 from PySide6.QtWebEngineCore import QWebEngineSettings
-from PySide6.QtWidgets import QFrame, QWidget, QHBoxLayout, QSplitter, QMainWindow
+from PySide6.QtWidgets import QFrame, QWidget, QHBoxLayout, QSplitter, QMainWindow, QLabel
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from pyecharts.commons.utils import JsCode
 
@@ -11,6 +12,7 @@ from qfluentwidgets import setTheme, Theme
 from qframelesswindow.webengine import FramelessWebEngineView
 from common.config import cfg
 from common.signal_bus import signalBus
+from view.component.FloatWebEngineView import FloatWebEngineView
 from pyecharts.charts import Line, Liquid, Bar, Gauge, PictorialBar, Pie, Bar3D
 from pyecharts.options import GaugePointerOpts, GaugeDetailOpts, GaugeTitleOpts, LabelOpts
 import pyecharts.options as opts
@@ -27,60 +29,79 @@ class VisualDashboardInterface(QFrame):
 
         self.showEvent = self.show_event
 
-        # self.container_widget = QWidget(self)
         self.layout = QHBoxLayout(self)
-        self.widget1 = FramelessWebEngineView(self)
-        # self.widget1 = QWebEngineView()
-        self.widget2 = FramelessWebEngineView(self)
-        self.widget3 = FramelessWebEngineView(self)
-        self.widget4 = FramelessWebEngineView(self)
-        self.widget5 = FramelessWebEngineView(self)
-        self.widget6 = FramelessWebEngineView(self)
-        self.widget7 = FramelessWebEngineView(self)
-        self.widget8 = FramelessWebEngineView(self)
-        self.widget9 = FramelessWebEngineView(self)
-        self.widget10 = FramelessWebEngineView(self)
+        self.widget1 = QLabel(self)
+        self.widget2 = FloatWebEngineView(self)
+        self.widget3 = FloatWebEngineView(self)
+        self.widget4 = FloatWebEngineView(self)
+        self.widget5 = FloatWebEngineView(self)
+        self.widget6 = FloatWebEngineView(self)
+        self.widget7 = FloatWebEngineView(self)
+        self.widget8 = FloatWebEngineView(self)
+        self.widget9 = FloatWebEngineView(self)
+        self.widget10 = FloatWebEngineView(self)
         # self.initHtml()
+        # self.setStyleSheet("QFrame{background-image: url(./resource/images/bigscreen_background.png);}")
+        self.setStyleSheet("background-color: rgb(232, 247, 255);")
+        # self.setBackground()
         self.initUI()
 
         self.load = False
 
+    def setBackground(self):
+        palette = self.palette()
+        pix = QPixmap("./resource/images/bigscreen_background.png")
+        pix = pix.scaled(self.width(), self.height(), Qt.IgnoreAspectRatio, Qt.SmoothTransformation)  # 自适应图片大小
+        palette.setBrush(self.backgroundRole(), QBrush(pix))  # 设置背景图片
+        # palette.setColor(self.backgroundRole(), QColor(192, 253, 123))  # 设置背景颜色
+        self.setPalette(palette)
+
     def initHtml(self):
         basic_path = os.path.join(os.path.dirname(__file__), '..')
+        self.widget1.setStyleSheet('background-color: rgb(191, 231, 254);font-size: 25px;')
+
         self.render_activity_line()
-        # self.widget6.page().setBackgroundColor(Qt.transparent)
+        self.widget6.page().setBackgroundColor(Qt.transparent)
         self.widget6.settings().setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
         self.widget6.load(QUrl.fromLocalFile(basic_path + "\\dashboard_charts\\activity_line.html"))
 
         self.render_today_speak_liquid()
+        self.widget3.page().setBackgroundColor(Qt.transparent)
         self.widget3.settings().setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
         self.widget3.load(QUrl.fromLocalFile(basic_path + "\\dashboard_charts\\today_speak_liquid.html"))
 
         self.render_speak_count_bar()
+        self.widget7.page().setBackgroundColor(Qt.transparent)
         self.widget7.settings().setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
         self.widget7.load(QUrl.fromLocalFile(basic_path + "\\dashboard_charts\\speak_count_bar.html"))
 
         self.render_word_bar()
+        self.widget9.page().setBackgroundColor(Qt.transparent)
         self.widget9.settings().setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
         self.widget9.load(QUrl.fromLocalFile(basic_path + "\\dashboard_charts\\word_bar.html"))
 
         self.render_time_line()
+        self.widget10.page().setBackgroundColor(Qt.transparent)
         self.widget10.settings().setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
         self.widget10.load(QUrl.fromLocalFile(basic_path + "\\dashboard_charts\\time_line.html"))
 
         self.render_interactive_gauge()
+        self.widget4.page().setBackgroundColor(Qt.transparent)
         self.widget4.settings().setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
         self.widget4.load(QUrl.fromLocalFile(basic_path + "\\dashboard_charts\\today_interactive_liquid.html"))
 
         self.render_intimacy_pictorialbar()
+        self.widget5.page().setBackgroundColor(Qt.transparent)
         self.widget5.settings().setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
         self.widget5.load(QUrl.fromLocalFile(basic_path + "\\dashboard_charts\\intimacy_pictorialbar.html"))
 
         self.render_topic_started_pie()
+        self.widget8.page().setBackgroundColor(Qt.transparent)
         self.widget8.settings().setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
         self.widget8.load(QUrl.fromLocalFile(basic_path + "\\dashboard_charts\\topic_pie.html"))
 
         self.render_word_person_3dBar()
+        self.widget2.page().setBackgroundColor(Qt.transparent)
         self.widget2.settings().setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
         self.widget2.load(QUrl.fromLocalFile(basic_path + "\\dashboard_charts\\word_person_3dBar.html"))
 
@@ -119,6 +140,10 @@ class VisualDashboardInterface(QFrame):
     #         self.widget6.setZoomFactor(new_zoom)
 
     def initUI(self):
+        self.widget1.setFixedHeight(50)
+        self.widget1.setText("群聊小秘数据大屏")
+        self.widget1.setAlignment(Qt.AlignCenter)
+
         splitter_width = 2
         splitter1 = QSplitter(Qt.Vertical)
         # splitter1.setStyleSheet("QSplitter::handle { background-color: white }")
@@ -446,12 +471,10 @@ class VisualDashboardInterface(QFrame):
                 if word in word_person[speaker]:
                     data.append([index1, index2, word_person[speaker][word]])
 
-        print(word_person)
-        print(word_chosen)
-        print(data)
-
         (
-            Bar3D()
+            Bar3D(init_opts=opts.InitOpts(
+                width="800px",
+            ))
             .add(
                 series_name="",
                 data=data,
