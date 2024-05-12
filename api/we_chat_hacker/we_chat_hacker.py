@@ -217,13 +217,13 @@ class WeChatHacker:
             return ''
         return self.user_name
 
-    def get_all_current_message(self, cache=False) -> List:
+    def get_all_current_message(self) -> List:
         """
         Get all messages of the current dialog
         :param cache: if cache is true, then read from cache
         :return: list of message dictionary, len(return) == 0 means LookupError
         """
-        if cache:
+        if WeChatHacker.cached:
             return WeChatHacker.msgs_cache
 
         self._we_chat_window.Show(0)
@@ -340,5 +340,6 @@ class WeChatHacker:
 if __name__ == '__main__':
     we = WeChatHacker()
     we.check_if_login_wechat()
-    we.send_msg('李泽朋', '测试')
+    # we.send_msg('李泽朋', '测试')
     # print(we.get_current_dialog_name())
+    print(we.get_all_current_message())
