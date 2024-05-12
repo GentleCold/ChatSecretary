@@ -147,8 +147,8 @@ class SettingsInterface(ScrollArea):
         self.getChatRecordCard.start_progress()
         self.hacker.get_all_current_message()
         self.getChatRecordCard.stop_progress()
-        print("get success")
-        print(self.hacker.get_all_current_message())
+        # print("get success")
+        # print(self.hacker.get_all_current_message(cache=True))
 
     def __OnThemeChanged(self, c):
         self.setStyleSheet("""
