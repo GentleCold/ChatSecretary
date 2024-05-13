@@ -122,7 +122,7 @@ class WeChatHacker:
                     words = jieba.cut(m['msg'])
                     for word in words:
                         word = word.strip()
-                        if word and word not in stopwords:
+                        if word and word not in stopwords and len(word) > 1:
                             if word in WeChatHacker.word_cache:
                                 WeChatHacker.word_cache[word] += 1
                             else:
