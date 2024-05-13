@@ -212,7 +212,7 @@ class VisualDashboardInterface(QFrame):
         event.accept()
 
     def render_activity_line(self):
-        msg = self.hacker.get_all_current_message(cache=True)
+        msg = self.hacker.get_all_current_message()
         count_dict = {}
         time = ''
         for m in msg:
@@ -258,7 +258,7 @@ class VisualDashboardInterface(QFrame):
                       self.hacker.get_current_dialog_name().rfind('(') + 1:self.hacker.get_current_dialog_name().rfind(
                           ')')
                       ]
-        msg = self.hacker.get_all_current_message(cache=True)
+        msg = self.hacker.get_all_current_message()
         msg.reverse()
         speak_today = set([])
         speak_temp = set([])
